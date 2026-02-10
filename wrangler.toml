@@ -3,6 +3,7 @@
 # -------------------
 name = "prod-staging-dexgram-userdb-api"
 compatibility_date = "2024-12-01"
+main = "src/index.ts"
 
 # Cron (commun)
 [triggers]
