@@ -32,6 +32,26 @@ export const validateSimplexUri = (value: unknown): string => {
   return trimmed;
 };
 
+export const validateTargetUri = (value: unknown): string => {
+  if (typeof value !== 'string') {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'target must be a string');
+  }
+  const trimmed = value.trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'target must be a valid absolute URI');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'target protocol must be http or https');
+  }
+  if (trimmed.length > 2048) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'target is too long');
+  }
+  return trimmed;
+};
+
 export const validateTld = (value: unknown): 'inco' | 'link' => {
   if (value === 'inco' || value === 'link') {
     return value;

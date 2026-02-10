@@ -1,6 +1,13 @@
 import { parseConfig, type Env } from './config/env.ts';
 import { ApiError, errorResponse } from './core/errors.ts';
-import { parseJsonBody, validatePassword, validateSimplexUri, validateTld, validateUsername } from './core/validation.ts';
+import {
+  parseJsonBody,
+  validatePassword,
+  validateSimplexUri,
+  validateTargetUri,
+  validateTld,
+  validateUsername,
+} from './core/validation.ts';
 import { rateLimitHook } from './http/rateLimit.ts';
 import { IncoRepository } from './repositories/incoRepository.ts';
 import { LinkRepository } from './repositories/linkRepository.ts';
@@ -9,9 +16,29 @@ import { SnowflakeGenerator } from './services/snowflake.ts';
 import { allocateUniqueSuffix } from './services/suffixAllocator.ts';
 
 interface CreateIncoBody { username: unknown; simplexUri: unknown; tld: unknown }
-interface CreateLinkBody { username: unknown; password: unknown; simplexUri: unknown; tld: unknown }
+interface CreateLinkBody {
+  username?: unknown;
+  password: unknown;
+  simplexUri?: unknown;
+  tld?: unknown;
+  payload?: { target?: unknown };
+  owner?: unknown;
+  ttlSeconds?: unknown;
+}
 interface PasswordBody { password: unknown }
-interface UpdateLinkBody extends PasswordBody { simplexUri: unknown }
+interface UpdateLinkBody extends PasswordBody {
+  simplexUri?: unknown;
+  payload?: { target?: unknown };
+}
+
+const DEFAULT_LINK_USERNAME = 'link';
+
+const parseLinkTarget = (body: { simplexUri?: unknown; payload?: { target?: unknown } }): string => {
+  if (body.payload?.target !== undefined) {
+    return validateTargetUri(body.payload.target);
+  }
+  return validateSimplexUri(body.simplexUri);
+};
 
 const minutesToIso = (minutes: number, from = Date.now()): string => new Date(from + minutes * 60_000).toISOString();
 
@@ -97,10 +124,11 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
 
   if (path === '/v1/link' && request.method === 'POST') {
     const body = await parseJsonBody<CreateLinkBody>(request);
-    const username = validateUsername(body.username);
+    const username = body.username === undefined ? DEFAULT_LINK_USERNAME : validateUsername(body.username);
     const password = validatePassword(body.password);
-    const simplexUri = validateSimplexUri(body.simplexUri);
-    if (validateTld(body.tld) !== 'link') {
+    const simplexUri = parseLinkTarget(body);
+    const tld = body.tld === undefined ? 'link' : validateTld(body.tld);
+    if (tld !== 'link') {
       throw new ApiError(400, 'VALIDATION_ERROR', 'tld must be link');
     }
 
@@ -157,7 +185,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
     assertTld(identifier, 'link');
     const body = await parseJsonBody<UpdateLinkBody>(request);
     const password = validatePassword(body.password);
-    const simplexUri = validateSimplexUri(body.simplexUri);
+    const simplexUri = parseLinkTarget(body);
     await authenticateLink(linkRepo, identifier, password, config.hmacSecret);
     await linkRepo.updateUri(identifier, simplexUri);
     return response({ id: identifier, simplexUri, requestId });
