@@ -166,6 +166,9 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
       if (!record) {
         throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
       }
+      if (new Date(record.expiresAt).getTime() <= Date.now()) {
+        throw new ApiError(410, 'EXPIRED', 'Identifier has expired');
+      }
       return response({ id: record.identifier, simplexUri: record.simplexUri, createdAt: record.createdAt, requestId });
     }
     if (tld === 'link') {
@@ -223,8 +226,13 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
 };
 
 const handleScheduled = async (_controller: ScheduledController, env: Env): Promise<void> => {
-  const repo = new LinkRepository(env.DB_LINK);
-  await repo.cleanupExpired(new Date().toISOString());
+  const now = new Date().toISOString();
+  const incoRepo = new IncoRepository(env.DB_INCO);
+  const linkRepo = new LinkRepository(env.DB_LINK);
+  await Promise.all([
+    incoRepo.cleanupExpired(now),
+    linkRepo.cleanupExpired(now),
+  ]);
 };
 
 const mapUnhandledError = (error: unknown): ApiError => {

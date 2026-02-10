@@ -42,6 +42,14 @@ export class IncoRepository {
       .run();
   }
 
+
+  async cleanupExpired(nowIso: string): Promise<number> {
+    const result = await this.db
+      .prepare('DELETE FROM inco_identifiers WHERE expires_at <= ?')
+      .bind(nowIso)
+      .run();
+    return result.meta.changes;
+  }
   async findByIdentifier(identifier: string): Promise<IncoRecord | null> {
     return (
       (await this.db
