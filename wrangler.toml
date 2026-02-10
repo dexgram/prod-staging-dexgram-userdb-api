@@ -42,25 +42,4 @@ database_name = "prod-dexgram-link-db"
 database_id = "8170407c-0fd0-4b07-9c18-82ada50ee5ce"
 
 
-# -------------------
-# STAGING
-# -------------------
-[env.staging]
-name = "staging-dexgram-userdb-api"
-workers_dev = false
-staging_urls = false
-routes = [
-  { pattern = "staging-userdb.dexgram.app/*", zone_name = "dexgram.app" }
-]
-
-
-[[env.staging.d1_databases]]
-binding = "DB_INCO"
-database_name = "dexgram-inco-db-staging"
-database_id = "905040ab-a782-4201-9857-e01c1cd1f9ea"
-
-[[env.staging.d1_databases]]
-binding = "DB_LINK"
-database_name = "dexgram-link-db-staging"
-database_id = "5605a518-eabb-492e-b82d-f2ee97ef465a"
 
