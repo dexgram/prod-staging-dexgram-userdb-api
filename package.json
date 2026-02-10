@@ -1,0 +1,11 @@
+{
+  "name": "prod-staging-dexgram-userdb-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --experimental-strip-types tests/**/*.test.ts",
+    "deploy:staging": "npx wrangler deploy --env staging",
+    "deploy:prod": "npx wrangler deploy --env prod"
+  }
+}
