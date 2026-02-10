@@ -1,4 +1,4 @@
-import { parseConfig, type Env } from './config/env.ts';
+import { parseConfig, parseHmacSecret, type AppConfig, type Env } from './config/env.ts';
 import { ApiError, errorResponse } from './core/errors.ts';
 import {
   parseJsonBody,
@@ -73,10 +73,15 @@ const authenticateLink = async (
 };
 
 const handleFetch = async (request: Request, env: Env): Promise<Response> => {
-  const config = parseConfig(env);
   const requestId = crypto.randomUUID();
   const url = new URL(request.url);
   const path = getPath(url);
+
+  let config: AppConfig | null = null;
+  const getConfig = (): AppConfig => {
+    config ??= parseConfig(env);
+    return config;
+  };
 
   await rateLimitHook({
     path,
@@ -86,7 +91,6 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
 
   const incoRepo = new IncoRepository(env.DB_INCO);
   const linkRepo = new LinkRepository(env.DB_LINK);
-  const snowflake = new SnowflakeGenerator(config.snowflakeEpochMs, config.snowflakeInstanceId);
 
   if (path === '/health' && request.method === 'GET') {
     return response({ ok: true, requestId, timestamp: new Date().toISOString() });
@@ -94,6 +98,8 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
 
   if (path === '/v1/inco' && request.method === 'POST') {
     const body = await parseJsonBody<CreateIncoBody>(request);
+    const config = getConfig();
+    const snowflake = new SnowflakeGenerator(config.snowflakeEpochMs, config.snowflakeInstanceId);
     const username = validateUsername(body.username);
     const simplexUri = validateSimplexUri(body.simplexUri);
     validateTld(body.tld);
@@ -123,6 +129,9 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
 
   if (path === '/v1/link' && request.method === 'POST') {
     const body = await parseJsonBody<CreateLinkBody>(request);
+    const config = getConfig();
+    const hmacSecret = parseHmacSecret(env);
+    const snowflake = new SnowflakeGenerator(config.snowflakeEpochMs, config.snowflakeInstanceId);
     const username = body.username === undefined ? DEFAULT_LINK_USERNAME : validateUsername(body.username);
     const password = validatePassword(body.password);
     const simplexUri = parseLinkTarget(body);
@@ -142,7 +151,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
       username,
       suffix,
       identifier,
-      passwordHash: await hmacSha256Hex(config.hmacSecret, password),
+      passwordHash: await hmacSha256Hex(hmacSecret, password),
       simplexUri,
       createdAt: now,
       expiresAt: minutesToIso(config.linkExpirationMinutes),
@@ -185,7 +194,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
     const body = await parseJsonBody<UpdateLinkBody>(request);
     const password = validatePassword(body.password);
     const simplexUri = parseLinkTarget(body);
-    await authenticateLink(linkRepo, identifier, password, config.hmacSecret);
+    await authenticateLink(linkRepo, identifier, password, parseHmacSecret(env));
     await linkRepo.updateUri(identifier, simplexUri);
     return response({ id: identifier, simplexUri, requestId });
   }
@@ -195,7 +204,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
     assertTld(identifier, 'link');
     const body = await parseJsonBody<PasswordBody>(request);
     const password = validatePassword(body.password);
-    await authenticateLink(linkRepo, identifier, password, config.hmacSecret);
+    await authenticateLink(linkRepo, identifier, password, parseHmacSecret(env));
     await linkRepo.delete(identifier);
     return response({ id: identifier, deleted: true, requestId });
   }
@@ -205,7 +214,8 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
     assertTld(identifier, 'link');
     const body = await parseJsonBody<PasswordBody>(request);
     const password = validatePassword(body.password);
-    await authenticateLink(linkRepo, identifier, password, config.hmacSecret);
+    const config = getConfig();
+    await authenticateLink(linkRepo, identifier, password, parseHmacSecret(env));
     const now = new Date().toISOString();
     const expiresAt = minutesToIso(config.linkExpirationMinutes);
     await linkRepo.ping(identifier, expiresAt, now);
@@ -216,11 +226,8 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
 };
 
 const handleScheduled = async (_controller: ScheduledController, env: Env): Promise<void> => {
-  const config = parseConfig(env);
   const repo = new LinkRepository(env.DB_LINK);
   await repo.cleanupExpired(new Date().toISOString());
-  // Hook for additional domain cleanups keyed by CLEANUP_INTERVAL_SECONDS.
-  void config.cleanupIntervalSeconds;
 };
 
 export default {
