@@ -2,8 +2,6 @@ export interface Env {
   DB_INCO: D1Database;
   DB_LINK: D1Database;
   HMAC_SECRET: string;
-  SNOWFLAKE_EPOCH: string;
-  SNOWFLAKE_INSTANCE_ID: string;
   CLEANUP_INTERVAL_SECONDS: string;
   GENERAL_DOMAIN_EXPIRATION_MINUTES: string;
   PHONE_EXPIRATION_MINUTES: string;
@@ -15,8 +13,6 @@ export interface Env {
 }
 
 export interface AppConfig {
-  snowflakeEpochMs: number;
-  snowflakeInstanceId: number;
   cleanupIntervalSeconds: number;
   incoExpirationMinutes: number;
   linkExpirationMinutes: number;
@@ -33,20 +29,7 @@ const parsePositiveInt = (name: string, raw: string): number => {
   return value;
 };
 
-const parseSnowflakeInstanceId = (raw: string): number => {
-  const value = Number.parseInt(raw, 10);
-  if (!Number.isFinite(value) || value < 0 || value > 1023) {
-    throw new Error('Invalid SNOWFLAKE_INSTANCE_ID (must be between 0 and 1023)');
-  }
-  return value;
-};
-
 export const parseConfig = (env: Env): AppConfig => {
-  const epoch = Date.parse(env.SNOWFLAKE_EPOCH);
-  if (!Number.isFinite(epoch)) {
-    throw new Error('Invalid SNOWFLAKE_EPOCH');
-  }
-
   const minSuffix = parsePositiveInt('MIN_USERNAME_Z_VALUE', env.MIN_USERNAME_Z_VALUE);
   const maxSuffix = parsePositiveInt('MAX_USERNAME_Z_VALUE', env.MAX_USERNAME_Z_VALUE);
   if (minSuffix > maxSuffix) {
@@ -54,8 +37,6 @@ export const parseConfig = (env: Env): AppConfig => {
   }
 
   return {
-    snowflakeEpochMs: epoch,
-    snowflakeInstanceId: parseSnowflakeInstanceId(env.SNOWFLAKE_INSTANCE_ID),
     cleanupIntervalSeconds: parsePositiveInt('CLEANUP_INTERVAL_SECONDS', env.CLEANUP_INTERVAL_SECONDS),
     incoExpirationMinutes: parsePositiveInt(
       'INCO_DOMAIN_EXPIRATION_MINUTES/GENERAL_DOMAIN_EXPIRATION_MINUTES',

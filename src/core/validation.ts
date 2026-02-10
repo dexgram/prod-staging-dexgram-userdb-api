@@ -1,7 +1,6 @@
 import { ApiError } from './errors.ts';
 
 const USERNAME_REGEX = /^[a-z0-9](?:[a-z0-9_-]{1,30}[a-z0-9])?$/;
-const SIMPLEX_URI_REGEX = /^simplex:[a-zA-Z0-9._~:/?#\[\]@!$&'()*+,;=-]{10,1024}$/;
 
 export const validateUsername = (value: unknown): string => {
   if (typeof value !== 'string') {
@@ -26,8 +25,17 @@ export const validateSimplexUri = (value: unknown): string => {
     throw new ApiError(400, 'VALIDATION_ERROR', 'simplexUri must be a string');
   }
   const trimmed = value.trim();
-  if (!SIMPLEX_URI_REGEX.test(trimmed)) {
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
     throw new ApiError(400, 'VALIDATION_ERROR', 'simplexUri format is invalid');
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'simplexUri must use https protocol');
+  }
+  if (trimmed.length > 2048) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'simplexUri is too long');
   }
   return trimmed;
 };
