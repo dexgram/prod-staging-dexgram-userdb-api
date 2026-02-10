@@ -7,14 +7,10 @@ Public identifier resolution API with two domains:
 
 ## Base URL
 
-Use your deployed Worker URL (or local dev URL):
+Use the production API URL:
 
 ```bash
-# Local Wrangler dev
-export API_BASE_URL="http://127.0.0.1:8787"
-
-# Example production URL
-# export API_BASE_URL="https://dexgram-userdb-api.<your-account>.workers.dev"
+export API_BASE_URL="https://prod-userdb.dexgram.app/v1/"
 ```
 
 ## Endpoints with concrete `curl` examples
@@ -24,7 +20,7 @@ export API_BASE_URL="http://127.0.0.1:8787"
 `GET /health`
 
 ```bash
-curl -i "$API_BASE_URL/health"
+curl -i "https://prod-userdb.dexgram.app/health"
 ```
 
 Expected:
@@ -39,14 +35,12 @@ Expected:
 `POST /v1/inco`
 
 ```bash
-curl -i -X POST "$API_BASE_URL/v1/inco" \
+curl -i -X POST "https://prod-userdb.dexgram.app/v1/inco" \
   -H "content-type: application/json" \
   -d '{
-    "owner": "did:key:z6MktExampleOwner",
-    "payload": {
-      "displayName": "alice",
-      "pubkey": "ed25519:9f5b..."
-    }
+    "username": "alice",
+    "simplexUri": "simplex://user#alice",
+    "tld": "inco"
   }'
 ```
 
@@ -59,12 +53,12 @@ Expected:
 
 ### 3) Create a mutable `.link` record (password-protected)
 
-`ttlSeconds` is server-managed from Wrangler config (`LINK_DOMAIN_EXPIRATION_MINUTES`) and `owner` is ignored by the API.
+`ttlSeconds` is server-managed from Wrangler config (`LINK_DOMAIN_EXPIRATION_MINUTES`).
 
 `POST /v1/link`
 
 ```bash
-curl -i -X POST "$API_BASE_URL/v1/link" \
+curl -i -X POST "https://prod-userdb.dexgram.app/v1/link" \
   -H "content-type: application/json" \
   -d '{
     "password": "my-strong-password",
@@ -88,7 +82,7 @@ Expected:
 ```bash
 # Replace with the identifier returned by create endpoints
 IDENTIFIER="alice-01.inco"
-curl -i "$API_BASE_URL/v1/resolve/$IDENTIFIER"
+curl -i "https://prod-userdb.dexgram.app/v1/resolve/$IDENTIFIER"
 ```
 
 Expected:
@@ -105,7 +99,7 @@ Expected:
 ```bash
 IDENTIFIER="alice-01.link"
 
-curl -i -X PATCH "$API_BASE_URL/v1/link/$IDENTIFIER" \
+curl -i -X PATCH "https://prod-userdb.dexgram.app/v1/link/$IDENTIFIER" \
   -H "content-type: application/json" \
   -d '{
     "password": "my-strong-password",
@@ -129,7 +123,7 @@ Expected:
 ```bash
 IDENTIFIER="alice-01.link"
 
-curl -i -X DELETE "$API_BASE_URL/v1/link/$IDENTIFIER" \
+curl -i -X DELETE "https://prod-userdb.dexgram.app/v1/link/$IDENTIFIER" \
   -H "content-type: application/json" \
   -d '{
     "password": "my-strong-password"
@@ -150,7 +144,7 @@ Expected:
 ```bash
 IDENTIFIER="alice-01.link"
 
-curl -i -X POST "$API_BASE_URL/v1/link/$IDENTIFIER/ping" \
+curl -i -X POST "https://prod-userdb.dexgram.app/v1/link/$IDENTIFIER/ping" \
   -H "content-type: application/json" \
   -d '{
     "password": "my-strong-password"

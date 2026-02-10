@@ -22,7 +22,6 @@ interface CreateLinkBody {
   simplexUri?: unknown;
   tld?: unknown;
   payload?: { target?: unknown };
-  owner?: unknown;
   ttlSeconds?: unknown;
 }
 interface PasswordBody { password: unknown }
