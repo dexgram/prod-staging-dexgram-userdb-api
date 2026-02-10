@@ -12,7 +12,6 @@ import { rateLimitHook } from './http/rateLimit.ts';
 import { IncoRepository } from './repositories/incoRepository.ts';
 import { LinkRepository } from './repositories/linkRepository.ts';
 import { hmacSha256Hex, timingSafeEqualHex } from './services/crypto.ts';
-import { SnowflakeGenerator } from './services/snowflake.ts';
 import { allocateUniqueSuffix } from './services/suffixAllocator.ts';
 
 interface CreateIncoBody { username: unknown; simplexUri: unknown; tld: unknown }
@@ -99,7 +98,6 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
   if (path === '/v1/inco' && request.method === 'POST') {
     const body = await parseJsonBody<CreateIncoBody>(request);
     const config = getConfig();
-    const snowflake = new SnowflakeGenerator(config.snowflakeEpochMs, config.snowflakeInstanceId);
     const username = validateUsername(body.username);
     const simplexUri = validateSimplexUri(body.simplexUri);
     validateTld(body.tld);
@@ -115,7 +113,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
     const identifier = `${username}.${suffix}.inco`;
     const now = new Date().toISOString();
     await incoRepo.create({
-      id: snowflake.next(),
+      id: crypto.randomUUID(),
       username,
       suffix,
       identifier,
@@ -131,7 +129,6 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
     const body = await parseJsonBody<CreateLinkBody>(request);
     const config = getConfig();
     const hmacSecret = parseHmacSecret(env);
-    const snowflake = new SnowflakeGenerator(config.snowflakeEpochMs, config.snowflakeInstanceId);
     const username = body.username === undefined ? DEFAULT_LINK_USERNAME : validateUsername(body.username);
     const password = validatePassword(body.password);
     const simplexUri = parseLinkTarget(body);
@@ -147,7 +144,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
     const identifier = `${username}.${suffix}.link`;
     const now = new Date().toISOString();
     await linkRepo.create({
-      id: snowflake.next(),
+      id: crypto.randomUUID(),
       username,
       suffix,
       identifier,
@@ -234,8 +231,7 @@ const mapUnhandledError = (error: unknown): ApiError => {
   const message = (error as Error | undefined)?.message ?? 'Unknown error';
 
   if (
-    message.includes('SNOWFLAKE_EPOCH')
-    || message.includes('HMAC_SECRET')
+    message.includes('HMAC_SECRET')
     || message.includes('MIN_USERNAME_Z_VALUE')
     || message.includes('MAX_USERNAME_Z_VALUE')
     || message.includes('Invalid positive integer')

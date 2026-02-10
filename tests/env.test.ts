@@ -7,8 +7,6 @@ const baseEnv = (): Env => ({
   DB_INCO: {} as D1Database,
   DB_LINK: {} as D1Database,
   HMAC_SECRET: '',
-  SNOWFLAKE_EPOCH: '2020-01-01T00:00:00Z',
-  SNOWFLAKE_INSTANCE_ID: '1',
   CLEANUP_INTERVAL_SECONDS: '5',
   GENERAL_DOMAIN_EXPIRATION_MINUTES: '1440',
   PHONE_EXPIRATION_MINUTES: '30',
@@ -20,23 +18,8 @@ const baseEnv = (): Env => ({
 
 test('parseConfig succeeds without HMAC_SECRET for inco routes', () => {
   const config = parseConfig(baseEnv());
-  assert.equal(config.snowflakeInstanceId, 1);
+  assert.equal(config.cleanupIntervalSeconds, 5);
   assert.equal(config.incoExpirationMinutes, 1440);
-});
-
-test('parseConfig accepts SNOWFLAKE_INSTANCE_ID set to 0', () => {
-  const env = baseEnv();
-  env.SNOWFLAKE_INSTANCE_ID = '0';
-
-  const config = parseConfig(env);
-  assert.equal(config.snowflakeInstanceId, 0);
-});
-
-test('parseConfig rejects SNOWFLAKE_INSTANCE_ID outside 0..1023', () => {
-  const env = baseEnv();
-  env.SNOWFLAKE_INSTANCE_ID = '2048';
-
-  assert.throws(() => parseConfig(env), /Invalid SNOWFLAKE_INSTANCE_ID/);
 });
 
 test('parseHmacSecret rejects missing or short secrets', () => {

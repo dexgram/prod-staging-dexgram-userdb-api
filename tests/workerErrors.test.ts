@@ -8,8 +8,6 @@ const buildEnv = (): Env => ({
   DB_INCO: {} as D1Database,
   DB_LINK: {} as D1Database,
   HMAC_SECRET: '1234567890abcdef',
-  SNOWFLAKE_EPOCH: '2020-01-01T00:00:00Z',
-  SNOWFLAKE_INSTANCE_ID: '1',
   CLEANUP_INTERVAL_SECONDS: '5',
   GENERAL_DOMAIN_EXPIRATION_MINUTES: '1440',
   PHONE_EXPIRATION_MINUTES: '30',
@@ -21,13 +19,13 @@ const buildEnv = (): Env => ({
 
 test('returns 503 with SERVICE_MISCONFIGURED for invalid runtime config', async () => {
   const env = buildEnv();
-  env.SNOWFLAKE_EPOCH = 'not-a-date';
+  env.MAX_USERNAME_Z_VALUE = 'invalid';
 
   const response = await worker.fetch(
     new Request('https://example.com/v1/inco', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: 'alice', simplexUri: 'simplex://user#alice', tld: 'inco' }),
+      body: JSON.stringify({ username: 'alice', simplexUri: 'https://example.com/user/alice', tld: 'inco' }),
     }),
     env,
   );
@@ -49,7 +47,7 @@ test('returns 503 with STORAGE_NOT_READY when D1 schema is unavailable', async (
     new Request('https://example.com/v1/inco', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: 'alice', simplexUri: 'simplex://user#alice', tld: 'inco' }),
+      body: JSON.stringify({ username: 'alice', simplexUri: 'https://example.com/user/alice', tld: 'inco' }),
     }),
     env,
   );

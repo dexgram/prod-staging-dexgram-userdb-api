@@ -1,17 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SnowflakeGenerator } from '../src/services/snowflake.ts';
 import { allocateUniqueSuffix } from '../src/services/suffixAllocator.ts';
 import { timingSafeEqualHex } from '../src/services/crypto.ts';
-import { validateTargetUri } from '../src/core/validation.ts';
-
-test('snowflake ids are monotonically increasing for equal timestamps', () => {
-  const generator = new SnowflakeGenerator(Date.parse('2020-01-01T00:00:00Z'), 1);
-  const id1 = generator.next(1_700_000_000_000);
-  const id2 = generator.next(1_700_000_000_000);
-  assert.ok(BigInt(id2) > BigInt(id1));
-});
+import { validateSimplexUri, validateTargetUri } from '../src/core/validation.ts';
 
 test('suffix allocator fails after max attempts', async () => {
   await assert.rejects(
@@ -37,4 +29,12 @@ test('validateTargetUri accepts https targets', () => {
 
 test('validateTargetUri rejects non-http protocols', () => {
   assert.throws(() => validateTargetUri('ftp://example.com/file'), /target protocol must be http or https/);
+});
+
+test('validateSimplexUri accepts https uris', () => {
+  assert.equal(validateSimplexUri('https://example.com/user/alice'), 'https://example.com/user/alice');
+});
+
+test('validateSimplexUri rejects simplex scheme', () => {
+  assert.throws(() => validateSimplexUri('simplex://user#alice'), /simplexUri must use https protocol/);
 });

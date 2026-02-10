@@ -39,7 +39,7 @@ curl -i -X POST "https://prod-userdb.dexgram.app/v1/inco" \
   -H "content-type: application/json" \
   -d '{
     "username": "alice",
-    "simplexUri": "simplex://user#alice",
+    "simplexUri": "https://example.com/user/alice",
     "tld": "inco"
   }'
 ```

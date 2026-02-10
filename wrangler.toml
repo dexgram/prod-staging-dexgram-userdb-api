@@ -10,8 +10,6 @@ main = "src/index.ts"
 crons = ["*/5 * * * *"]
 
 [env.prod.vars]
-SNOWFLAKE_EPOCH = "2020-01-01T00:00:00Z"
-SNOWFLAKE_INSTANCE_ID = "0"
 CLEANUP_INTERVAL_SECONDS = "5"
 GENERAL_DOMAIN_EXPIRATION_MINUTES = "1440"
 PHONE_EXPIRATION_MINUTES = "30"
@@ -64,4 +62,3 @@ database_id = "905040ab-a782-4201-9857-e01c1cd1f9ea"
 binding = "DB_LINK"
 database_name = "dexgram-link-db-staging"
 database_id = "5605a518-eabb-492e-b82d-f2ee97ef465a"
-
