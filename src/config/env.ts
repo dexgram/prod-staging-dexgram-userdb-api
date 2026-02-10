@@ -3,7 +3,6 @@ export interface Env {
   DB_LINK: D1Database;
   HMAC_SECRET: string;
   CLEANUP_INTERVAL_SECONDS: string;
-  PHONE_EXPIRATION_MINUTES: string;
   LINK_DOMAIN_EXPIRATION_MINUTES: string;
   MAX_USERNAME_SUFFIX_ATTEMPTS: string;
   MIN_USERNAME_Z_VALUE: string;
