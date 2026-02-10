@@ -23,7 +23,6 @@ export interface AppConfig {
   maxSuffixAttempts: number;
   minSuffix: number;
   maxSuffix: number;
-  hmacSecret: string;
 }
 
 const parsePositiveInt = (name: string, raw: string): number => {
@@ -46,10 +45,6 @@ export const parseConfig = (env: Env): AppConfig => {
     throw new Error('MIN_USERNAME_Z_VALUE cannot be greater than MAX_USERNAME_Z_VALUE');
   }
 
-  if (!env.HMAC_SECRET || env.HMAC_SECRET.trim().length < 16) {
-    throw new Error('HMAC_SECRET must be set and at least 16 chars long');
-  }
-
   return {
     snowflakeEpochMs: epoch,
     snowflakeInstanceId: parsePositiveInt('SNOWFLAKE_INSTANCE_ID', env.SNOWFLAKE_INSTANCE_ID),
@@ -62,6 +57,12 @@ export const parseConfig = (env: Env): AppConfig => {
     maxSuffixAttempts: parsePositiveInt('MAX_USERNAME_SUFFIX_ATTEMPTS', env.MAX_USERNAME_SUFFIX_ATTEMPTS),
     minSuffix,
     maxSuffix,
-    hmacSecret: env.HMAC_SECRET,
   };
+};
+
+export const parseHmacSecret = (env: Env): string => {
+  if (!env.HMAC_SECRET || env.HMAC_SECRET.trim().length < 16) {
+    throw new Error('HMAC_SECRET must be set and at least 16 chars long');
+  }
+  return env.HMAC_SECRET;
 };
