@@ -5,6 +5,11 @@ Public identifier resolution API with two domains:
 - `.inco` append-only, immutable records
 - `.link` password-protected mutable records with expiration and cron cleanup
 
+## Retention and cleanup
+
+- `.inco`: records are immutable from API writes, have an expiration (`INCO_DOMAIN_EXPIRATION_MINUTES`), and are automatically deleted by the scheduled cleanup after expiry (cron every 5 minutes: `*/5 * * * *`).
+- `.link`: expired records are also cleaned by the same Worker scheduled trigger every 5 minutes (`*/5 * * * *`).
+
 ## Base URL
 
 Use the production API URL:
@@ -161,6 +166,7 @@ Expected:
 ## D1 Migrations
 
 - `migrations/inco/0001_init.sql`
+- `migrations/inco/0002_allow_expiration_cleanup.sql`
 - `migrations/link/0001_init.sql`
 
 ## Local checks

@@ -3,13 +3,12 @@ export interface Env {
   DB_LINK: D1Database;
   HMAC_SECRET: string;
   CLEANUP_INTERVAL_SECONDS: string;
-  GENERAL_DOMAIN_EXPIRATION_MINUTES: string;
   PHONE_EXPIRATION_MINUTES: string;
   LINK_DOMAIN_EXPIRATION_MINUTES: string;
   MAX_USERNAME_SUFFIX_ATTEMPTS: string;
   MIN_USERNAME_Z_VALUE: string;
   MAX_USERNAME_Z_VALUE: string;
-  INCO_DOMAIN_EXPIRATION_MINUTES?: string;
+  INCO_DOMAIN_EXPIRATION_MINUTES: string;
 }
 
 export interface AppConfig {
@@ -38,10 +37,7 @@ export const parseConfig = (env: Env): AppConfig => {
 
   return {
     cleanupIntervalSeconds: parsePositiveInt('CLEANUP_INTERVAL_SECONDS', env.CLEANUP_INTERVAL_SECONDS),
-    incoExpirationMinutes: parsePositiveInt(
-      'INCO_DOMAIN_EXPIRATION_MINUTES/GENERAL_DOMAIN_EXPIRATION_MINUTES',
-      env.INCO_DOMAIN_EXPIRATION_MINUTES ?? env.GENERAL_DOMAIN_EXPIRATION_MINUTES,
-    ),
+    incoExpirationMinutes: parsePositiveInt('INCO_DOMAIN_EXPIRATION_MINUTES', env.INCO_DOMAIN_EXPIRATION_MINUTES),
     linkExpirationMinutes: parsePositiveInt('LINK_DOMAIN_EXPIRATION_MINUTES', env.LINK_DOMAIN_EXPIRATION_MINUTES),
     maxSuffixAttempts: parsePositiveInt('MAX_USERNAME_SUFFIX_ATTEMPTS', env.MAX_USERNAME_SUFFIX_ATTEMPTS),
     minSuffix,
