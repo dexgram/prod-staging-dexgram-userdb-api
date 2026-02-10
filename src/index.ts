@@ -1,0 +1,215 @@
+import { parseConfig, type Env } from './config/env.ts';
+import { ApiError, errorResponse } from './core/errors.ts';
+import { parseJsonBody, validatePassword, validateSimplexUri, validateTld, validateUsername } from './core/validation.ts';
+import { rateLimitHook } from './http/rateLimit.ts';
+import { IncoRepository } from './repositories/incoRepository.ts';
+import { LinkRepository } from './repositories/linkRepository.ts';
+import { hmacSha256Hex, timingSafeEqualHex } from './services/crypto.ts';
+import { SnowflakeGenerator } from './services/snowflake.ts';
+import { allocateUniqueSuffix } from './services/suffixAllocator.ts';
+
+interface CreateIncoBody { username: unknown; simplexUri: unknown; tld: unknown }
+interface CreateLinkBody { username: unknown; password: unknown; simplexUri: unknown; tld: unknown }
+interface PasswordBody { password: unknown }
+interface UpdateLinkBody extends PasswordBody { simplexUri: unknown }
+
+const minutesToIso = (minutes: number, from = Date.now()): string => new Date(from + minutes * 60_000).toISOString();
+
+const getPath = (url: URL): string => url.pathname.replace(/\/+$/, '') || '/';
+
+const response = (payload: unknown, status = 200): Response =>
+  Response.json(payload, { status, headers: { 'cache-control': 'no-store' } });
+
+const assertTld = (identifier: string, expected: 'inco' | 'link'): void => {
+  const parts = identifier.split('.');
+  if (parts.length !== 3 || parts[2] !== expected) {
+    throw new ApiError(400, 'VALIDATION_ERROR', `identifier must match <username>.<number>.${expected}`);
+  }
+};
+
+const authenticateLink = async (
+  repo: LinkRepository,
+  identifier: string,
+  password: string,
+  secret: string,
+): Promise<void> => {
+  const record = await repo.findByIdentifier(identifier);
+  if (!record) {
+    throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
+  }
+  if (new Date(record.expiresAt).getTime() <= Date.now()) {
+    throw new ApiError(410, 'EXPIRED', 'Identifier has expired');
+  }
+  const computedHash = await hmacSha256Hex(secret, password);
+  if (!timingSafeEqualHex(computedHash, record.passwordHash)) {
+    throw new ApiError(401, 'AUTH_FAILED', 'Invalid credentials');
+  }
+};
+
+const handleFetch = async (request: Request, env: Env): Promise<Response> => {
+  const config = parseConfig(env);
+  const requestId = crypto.randomUUID();
+  const url = new URL(request.url);
+  const path = getPath(url);
+
+  await rateLimitHook({
+    path,
+    method: request.method,
+    ip: request.headers.get('CF-Connecting-IP') ?? '0.0.0.0',
+  });
+
+  const incoRepo = new IncoRepository(env.DB_INCO);
+  const linkRepo = new LinkRepository(env.DB_LINK);
+  const snowflake = new SnowflakeGenerator(config.snowflakeEpochMs, config.snowflakeInstanceId);
+
+  if (path === '/health' && request.method === 'GET') {
+    return response({ ok: true, requestId, timestamp: new Date().toISOString() });
+  }
+
+  if (path === '/v1/inco' && request.method === 'POST') {
+    const body = await parseJsonBody<CreateIncoBody>(request);
+    const username = validateUsername(body.username);
+    const simplexUri = validateSimplexUri(body.simplexUri);
+    validateTld(body.tld);
+    if (body.tld !== 'inco') {
+      throw new ApiError(400, 'VALIDATION_ERROR', 'tld must be inco');
+    }
+
+    const suffix = await allocateUniqueSuffix(
+      { min: config.minSuffix, max: config.maxSuffix, maxAttempts: config.maxSuffixAttempts },
+      (candidate) => incoRepo.suffixExists(candidate),
+    );
+
+    const identifier = `${username}.${suffix}.inco`;
+    const now = new Date().toISOString();
+    await incoRepo.create({
+      id: snowflake.next(),
+      username,
+      suffix,
+      identifier,
+      simplexUri,
+      createdAt: now,
+      expiresAt: minutesToIso(config.incoExpirationMinutes),
+    });
+
+    return response({ id: identifier, simplexUri, createdAt: now, requestId }, 201);
+  }
+
+  if (path === '/v1/link' && request.method === 'POST') {
+    const body = await parseJsonBody<CreateLinkBody>(request);
+    const username = validateUsername(body.username);
+    const password = validatePassword(body.password);
+    const simplexUri = validateSimplexUri(body.simplexUri);
+    if (validateTld(body.tld) !== 'link') {
+      throw new ApiError(400, 'VALIDATION_ERROR', 'tld must be link');
+    }
+
+    const suffix = await allocateUniqueSuffix(
+      { min: config.minSuffix, max: config.maxSuffix, maxAttempts: config.maxSuffixAttempts },
+      (candidate) => linkRepo.suffixExists(candidate),
+    );
+    const identifier = `${username}.${suffix}.link`;
+    const now = new Date().toISOString();
+    await linkRepo.create({
+      id: snowflake.next(),
+      username,
+      suffix,
+      identifier,
+      passwordHash: await hmacSha256Hex(config.hmacSecret, password),
+      simplexUri,
+      createdAt: now,
+      expiresAt: minutesToIso(config.linkExpirationMinutes),
+      lastPingAt: now,
+    });
+
+    return response({ id: identifier, simplexUri, createdAt: now, requestId }, 201);
+  }
+
+  if (path.startsWith('/v1/resolve/') && request.method === 'GET') {
+    const identifier = decodeURIComponent(path.replace('/v1/resolve/', ''));
+    const tld = identifier.split('.').at(-1);
+    if (tld === 'inco') {
+      const record = await incoRepo.findByIdentifier(identifier);
+      if (!record) {
+        throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
+      }
+      return response({ id: record.identifier, simplexUri: record.simplexUri, createdAt: record.createdAt, requestId });
+    }
+    if (tld === 'link') {
+      const record = await linkRepo.findByIdentifier(identifier);
+      if (!record) {
+        throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
+      }
+      if (new Date(record.expiresAt).getTime() <= Date.now()) {
+        throw new ApiError(410, 'EXPIRED', 'Identifier has expired');
+      }
+      return response({ id: record.identifier, simplexUri: record.simplexUri, createdAt: record.createdAt, requestId });
+    }
+    throw new ApiError(400, 'VALIDATION_ERROR', 'Unknown identifier tld');
+  }
+
+  if (path.startsWith('/v1/inco/') && (request.method === 'PUT' || request.method === 'PATCH' || request.method === 'DELETE')) {
+    throw new ApiError(405, 'IMMUTABLE_DOMAIN', '.inco identifiers are immutable and append-only');
+  }
+
+  if (path.startsWith('/v1/link/') && request.method === 'PATCH') {
+    const identifier = decodeURIComponent(path.replace('/v1/link/', ''));
+    assertTld(identifier, 'link');
+    const body = await parseJsonBody<UpdateLinkBody>(request);
+    const password = validatePassword(body.password);
+    const simplexUri = validateSimplexUri(body.simplexUri);
+    await authenticateLink(linkRepo, identifier, password, config.hmacSecret);
+    await linkRepo.updateUri(identifier, simplexUri);
+    return response({ id: identifier, simplexUri, requestId });
+  }
+
+  if (path.startsWith('/v1/link/') && request.method === 'DELETE') {
+    const identifier = decodeURIComponent(path.replace('/v1/link/', ''));
+    assertTld(identifier, 'link');
+    const body = await parseJsonBody<PasswordBody>(request);
+    const password = validatePassword(body.password);
+    await authenticateLink(linkRepo, identifier, password, config.hmacSecret);
+    await linkRepo.delete(identifier);
+    return response({ id: identifier, deleted: true, requestId });
+  }
+
+  if (path.startsWith('/v1/link/') && path.endsWith('/ping') && request.method === 'POST') {
+    const identifier = decodeURIComponent(path.replace('/v1/link/', '').replace('/ping', ''));
+    assertTld(identifier, 'link');
+    const body = await parseJsonBody<PasswordBody>(request);
+    const password = validatePassword(body.password);
+    await authenticateLink(linkRepo, identifier, password, config.hmacSecret);
+    const now = new Date().toISOString();
+    const expiresAt = minutesToIso(config.linkExpirationMinutes);
+    await linkRepo.ping(identifier, expiresAt, now);
+    return response({ id: identifier, expiresAt, requestId });
+  }
+
+  throw new ApiError(404, 'ROUTE_NOT_FOUND', 'Route not found');
+};
+
+const handleScheduled = async (_controller: ScheduledController, env: Env): Promise<void> => {
+  const config = parseConfig(env);
+  const repo = new LinkRepository(env.DB_LINK);
+  await repo.cleanupExpired(new Date().toISOString());
+  // Hook for additional domain cleanups keyed by CLEANUP_INTERVAL_SECONDS.
+  void config.cleanupIntervalSeconds;
+};
+
+export default {
+  async fetch(request, env): Promise<Response> {
+    const requestId = crypto.randomUUID();
+    try {
+      return await handleFetch(request, env);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return errorResponse(error, requestId);
+      }
+      console.error('Unhandled error', { requestId, message: (error as Error)?.message });
+      return errorResponse(new ApiError(500, 'INTERNAL_ERROR', 'Unexpected server error'), requestId);
+    }
+  },
+  async scheduled(controller, env): Promise<void> {
+    await handleScheduled(controller, env);
+  },
+} satisfies ExportedHandler<Env>;
