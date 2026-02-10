@@ -88,7 +88,7 @@ Expected:
 
 ```bash
 # Replace with the identifier returned by create endpoints
-IDENTIFIER="alice-01.inco"
+IDENTIFIER="alice.01.inco"
 curl -i "https://prod-userdb.dexgram.app/v1/resolve/$IDENTIFIER"
 ```
 
@@ -104,7 +104,7 @@ Expected:
 `PATCH /v1/link/:identifier`
 
 ```bash
-IDENTIFIER="alice-01.link"
+IDENTIFIER="alice.01.link"
 
 curl -i -X PATCH "https://prod-userdb.dexgram.app/v1/link/$IDENTIFIER" \
   -H "content-type: application/json" \
@@ -128,7 +128,7 @@ Expected:
 `DELETE /v1/link/:identifier`
 
 ```bash
-IDENTIFIER="alice-01.link"
+IDENTIFIER="alice.01.link"
 
 curl -i -X DELETE "https://prod-userdb.dexgram.app/v1/link/$IDENTIFIER" \
   -H "content-type: application/json" \
@@ -149,7 +149,7 @@ Expected:
 `POST /v1/link/:identifier/ping`
 
 ```bash
-IDENTIFIER="alice-01.link"
+IDENTIFIER="alice.01.link"
 
 curl -i -X POST "https://prod-userdb.dexgram.app/v1/link/$IDENTIFIER/ping" \
   -H "content-type: application/json" \
