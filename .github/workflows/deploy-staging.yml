@@ -1,0 +1,53 @@
+name: Deploy to Cloudflare (staging)
+
+on:
+  push:
+    branches: [ staging ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Worker to staging
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # (idea) 
+      # - name: Build
+      #   run: npm run build
+
+      # 1) Sync GitHub secrets -> Cloudflare Worker secrets (staging)
+      - name: Sync secrets to Cloudflare (staging)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Push secret 
+          printf "%s" "${HMAC_SECRET}" | npx wrangler secret put HMAC_SECRET --env staging
+
+          echo "Secrets synced to Cloudflare (staging)"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+          HMAC_SECRET: ${{ secrets.HMAC_SECRET }}
+
+      # 2) Deploy worker (staging)
+      - name: Deploy with Wrangler (staging)
+        run: npx wrangler deploy --env staging
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
