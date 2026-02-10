@@ -24,6 +24,21 @@ test('parseConfig succeeds without HMAC_SECRET for inco routes', () => {
   assert.equal(config.incoExpirationMinutes, 1440);
 });
 
+test('parseConfig accepts SNOWFLAKE_INSTANCE_ID set to 0', () => {
+  const env = baseEnv();
+  env.SNOWFLAKE_INSTANCE_ID = '0';
+
+  const config = parseConfig(env);
+  assert.equal(config.snowflakeInstanceId, 0);
+});
+
+test('parseConfig rejects SNOWFLAKE_INSTANCE_ID outside 0..1023', () => {
+  const env = baseEnv();
+  env.SNOWFLAKE_INSTANCE_ID = '2048';
+
+  assert.throws(() => parseConfig(env), /Invalid SNOWFLAKE_INSTANCE_ID/);
+});
+
 test('parseHmacSecret rejects missing or short secrets', () => {
   assert.throws(() => parseHmacSecret(baseEnv()), /HMAC_SECRET must be set and at least 16 chars long/);
 

@@ -230,6 +230,31 @@ const handleScheduled = async (_controller: ScheduledController, env: Env): Prom
   await repo.cleanupExpired(new Date().toISOString());
 };
 
+const mapUnhandledError = (error: unknown): ApiError => {
+  const message = (error as Error | undefined)?.message ?? 'Unknown error';
+
+  if (
+    message.includes('SNOWFLAKE_EPOCH')
+    || message.includes('HMAC_SECRET')
+    || message.includes('MIN_USERNAME_Z_VALUE')
+    || message.includes('MAX_USERNAME_Z_VALUE')
+    || message.includes('Invalid positive integer')
+  ) {
+    return new ApiError(503, 'SERVICE_MISCONFIGURED', 'Service is temporarily misconfigured');
+  }
+
+  if (
+    message.includes('no such table')
+    || message.includes('no such column')
+    || message.includes('D1_ERROR')
+    || message.includes('database is locked')
+  ) {
+    return new ApiError(503, 'STORAGE_NOT_READY', 'Storage backend is unavailable');
+  }
+
+  return new ApiError(500, 'INTERNAL_ERROR', 'Unexpected server error');
+};
+
 export default {
   async fetch(request, env): Promise<Response> {
     const requestId = crypto.randomUUID();
@@ -240,7 +265,7 @@ export default {
         return errorResponse(error, requestId);
       }
       console.error('Unhandled error', { requestId, message: (error as Error)?.message });
-      return errorResponse(new ApiError(500, 'INTERNAL_ERROR', 'Unexpected server error'), requestId);
+      return errorResponse(mapUnhandledError(error), requestId);
     }
   },
   async scheduled(controller, env): Promise<void> {
