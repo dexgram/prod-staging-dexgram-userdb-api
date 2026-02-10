@@ -59,25 +59,25 @@ Expected:
 
 ### 3) Create a mutable `.link` record (password-protected)
 
+`ttlSeconds` is server-managed from Wrangler config (`LINK_DOMAIN_EXPIRATION_MINUTES`) and `owner` is ignored by the API.
+
 `POST /v1/link`
 
 ```bash
 curl -i -X POST "$API_BASE_URL/v1/link" \
   -H "content-type: application/json" \
   -d '{
-    "owner": "did:key:z6MktExampleOwner",
     "password": "my-strong-password",
     "payload": {
       "target": "https://example.com/profile/alice"
-    },
-    "ttlSeconds": 2592000
+    }
   }'
 ```
 
 Expected:
 
 - `201 Created`
-- JSON containing the generated identifier ending with `.link`
+- JSON containing the generated identifier ending with `.link` and the stored target URI
 
 ---
 

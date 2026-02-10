@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { SnowflakeGenerator } from '../src/services/snowflake.ts';
 import { allocateUniqueSuffix } from '../src/services/suffixAllocator.ts';
 import { timingSafeEqualHex } from '../src/services/crypto.ts';
+import { validateTargetUri } from '../src/core/validation.ts';
 
 test('snowflake ids are monotonically increasing for equal timestamps', () => {
   const generator = new SnowflakeGenerator(Date.parse('2020-01-01T00:00:00Z'), 1);
@@ -27,4 +28,13 @@ test('timingSafeEqualHex compares deterministic strings', () => {
   assert.equal(timingSafeEqualHex('abcd', 'abcd'), true);
   assert.equal(timingSafeEqualHex('abcd', 'abce'), false);
   assert.equal(timingSafeEqualHex('abcd', 'abc'), false);
+});
+
+
+test('validateTargetUri accepts https targets', () => {
+  assert.equal(validateTargetUri('https://example.com/profile/alice'), 'https://example.com/profile/alice');
+});
+
+test('validateTargetUri rejects non-http protocols', () => {
+  assert.throws(() => validateTargetUri('ftp://example.com/file'), /target protocol must be http or https/);
 });
