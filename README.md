@@ -61,7 +61,9 @@ Expected:
 curl -i -X POST "https://prod-userdb.dexgram.app/v1/link" \
   -H "content-type: application/json" \
   -d '{
+    "username": "alice",
     "password": "my-strong-password",
+    "tld": "link",
     "payload": {
       "target": "https://example.com/profile/alice"
     }
