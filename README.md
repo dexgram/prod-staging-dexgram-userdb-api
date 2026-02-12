@@ -95,7 +95,7 @@ curl -i "https://prod-userdb.dexgram.app/v1/resolve/$IDENTIFIER"
 Expected:
 
 - `200 OK` with resolved record data when identifier exists
-- `404 Not Found` when identifier does not exist (or expired `.link`)
+- `404 Not Found` when identifier does not exist or has expired
 
 ---
 
