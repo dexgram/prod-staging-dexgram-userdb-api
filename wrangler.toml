@@ -32,12 +32,12 @@ routes = [
 [[env.prod.d1_databases]]
 binding = "DB_INCO"
 database_name = "prod-dexgram-inco-db"
-database_id = "accc64b6-2aa1-4b24-ba53-d3548f263eef"
+database_id = "c24996c5-440e-4763-9a42-3993fd7d8c72"
 
 [[env.prod.d1_databases]]
 binding = "DB_LINK"
 database_name = "prod-dexgram-link-db"
-database_id = "8170407c-0fd0-4b07-9c18-82ada50ee5ce"
+database_id = "c612ae4a-1a42-41c3-bf91-e8542f0ee3f2"
 
 
 # -------------------
