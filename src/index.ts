@@ -167,7 +167,8 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
         throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
       }
       if (new Date(record.expiresAt).getTime() <= Date.now()) {
-        throw new ApiError(410, 'EXPIRED', 'Identifier has expired');
+        await incoRepo.delete(identifier);
+        throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
       }
       return response({ id: record.identifier, simplexUri: record.simplexUri, createdAt: record.createdAt, requestId });
     }
@@ -177,7 +178,8 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
         throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
       }
       if (new Date(record.expiresAt).getTime() <= Date.now()) {
-        throw new ApiError(410, 'EXPIRED', 'Identifier has expired');
+        await linkRepo.delete(identifier);
+        throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
       }
       return response({ id: record.identifier, simplexUri: record.simplexUri, createdAt: record.createdAt, requestId });
     }

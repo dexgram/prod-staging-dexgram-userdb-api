@@ -42,6 +42,14 @@ export class IncoRepository {
       .run();
   }
 
+  async delete(identifier: string): Promise<boolean> {
+    const result = await this.db
+      .prepare('DELETE FROM inco_identifiers WHERE identifier = ?')
+      .bind(identifier)
+      .run();
+    return result.meta.changes > 0;
+  }
+
 
   async cleanupExpired(nowIso: string): Promise<number> {
     const result = await this.db
