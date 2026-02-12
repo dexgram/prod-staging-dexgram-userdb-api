@@ -176,3 +176,12 @@ npm ci
 npm run check
 npm test
 ```
+
+## Reminder (production)
+
+At the end, remember to apply the schema for both D1 databases:
+
+```bash
+npx wrangler d1 execute prod-dexgram-inco-db --remote --env prod --file=./migrations/inco/0001_init.sql
+npx wrangler d1 execute prod-dexgram-link-db --remote --env prod --file=./migrations/link/0001_init.sql
+```
