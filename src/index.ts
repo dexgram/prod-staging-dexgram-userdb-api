@@ -122,7 +122,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
       expiresAt: minutesToIso(config.incoExpirationMinutes),
     });
 
-    return response({ id: identifier, simplexUri, createdAt: now, requestId }, 201);
+    return response({ success: true, data: { username: identifier } }, 201);
   }
 
   if (path === '/v1/link' && request.method === 'POST') {
@@ -155,7 +155,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
       lastPingAt: now,
     });
 
-    return response({ id: identifier, simplexUri, createdAt: now, requestId }, 201);
+    return response({ success: true, data: { username: identifier } }, 201);
   }
 
   if (path.startsWith('/v1/resolve/') && request.method === 'GET') {
