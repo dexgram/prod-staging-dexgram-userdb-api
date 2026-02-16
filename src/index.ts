@@ -170,7 +170,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
         await incoRepo.delete(identifier);
         throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
       }
-      return response({ id: record.identifier, simplexUri: record.simplexUri, createdAt: record.createdAt, requestId });
+      return response({ success: true, data: { address: record.simplexUri } });
     }
     if (tld === 'link') {
       const record = await linkRepo.findByIdentifier(identifier);
@@ -181,7 +181,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
         await linkRepo.delete(identifier);
         throw new ApiError(404, 'NOT_FOUND', 'Identifier was not found');
       }
-      return response({ id: record.identifier, simplexUri: record.simplexUri, createdAt: record.createdAt, requestId });
+      return response({ success: true, data: { address: record.simplexUri } });
     }
     throw new ApiError(400, 'VALIDATION_ERROR', 'Unknown identifier tld');
   }
