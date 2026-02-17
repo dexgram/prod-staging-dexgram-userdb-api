@@ -68,6 +68,14 @@ export class LinkRepository {
     return result.meta.changes > 0;
   }
 
+  async updateUsername(identifier: string, username: string, updatedIdentifier: string): Promise<boolean> {
+    const result = await this.db
+      .prepare('UPDATE link_identifiers SET username = ?, identifier = ? WHERE identifier = ?')
+      .bind(username, updatedIdentifier, identifier)
+      .run();
+    return result.meta.changes > 0;
+  }
+
   async delete(identifier: string): Promise<boolean> {
     const result = await this.db.prepare('DELETE FROM link_identifiers WHERE identifier = ?').bind(identifier).run();
     return result.meta.changes > 0;
