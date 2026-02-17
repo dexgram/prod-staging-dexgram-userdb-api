@@ -28,6 +28,9 @@ interface UpdateLinkBody extends PasswordBody {
   simplexUri?: unknown;
   payload?: { target?: unknown };
 }
+interface UpdateLinkUsernameBody extends PasswordBody {
+  username: unknown;
+}
 
 const DEFAULT_LINK_USERNAME = 'link';
 
@@ -191,6 +194,25 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
   }
 
   if (path.startsWith('/v1/link/') && request.method === 'PATCH') {
+    if (path.endsWith('/username')) {
+      const identifier = decodeURIComponent(path.replace('/v1/link/', '').replace('/username', ''));
+      assertTld(identifier, 'link');
+      const body = await parseJsonBody<UpdateLinkUsernameBody>(request);
+      const password = validatePassword(body.password);
+      const username = validateUsername(body.username);
+      await authenticateLink(linkRepo, identifier, password, parseHmacSecret(env));
+
+      const currentSuffix = Number.parseInt(identifier.split('.')[1] ?? '', 10);
+      const updatedIdentifier = `${username}.${currentSuffix}.link`;
+      const existingRecord = await linkRepo.findByIdentifier(updatedIdentifier);
+      if (existingRecord && updatedIdentifier !== identifier) {
+        throw new ApiError(409, 'IDENTIFIER_TAKEN', 'Requested username is unavailable for this suffix');
+      }
+
+      await linkRepo.updateUsername(identifier, username, updatedIdentifier);
+      return response({ previousId: identifier, id: updatedIdentifier, requestId });
+    }
+
     const identifier = decodeURIComponent(path.replace('/v1/link/', ''));
     assertTld(identifier, 'link');
     const body = await parseJsonBody<UpdateLinkBody>(request);

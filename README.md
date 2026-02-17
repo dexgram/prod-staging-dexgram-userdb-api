@@ -163,6 +163,29 @@ Expected:
 - `200 OK` when password is valid and expiration is refreshed
 - `401 Unauthorized` when password is invalid
 
+### 8) Update a mutable `.link` username record
+
+`PATCH /v1/link/:identifier/username`
+
+```bash
+IDENTIFIER="alice.01.link"
+
+curl -i -X PATCH "https://prod-userdb.dexgram.app/v1/link/$IDENTIFIER/username" \
+  -H "content-type: application/json" \
+  -d '{
+    "password": "my-strong-password",
+    "username": "alice_new"
+  }'
+```
+
+Expected:
+
+- `200 OK` when password is valid and username update succeeds
+- Previous identifier is replaced by the new one automatically (same suffix, new username)
+- `401 Unauthorized` when password is invalid
+
+---
+
 ## D1 Migrations
 
 - `migrations/inco/0001_init.sql`
