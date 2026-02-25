@@ -23,7 +23,6 @@ MAX_USERNAME_Z_VALUE = "9999"
 [env.prod]
 name = "prod-dexgram-userdb-api"
 workers_dev = false
-staging_urls = false
 routes = [
   { pattern = "prod-userdb.dexgram.app/*", zone_name = "dexgram.app" }
 ]
@@ -46,7 +45,6 @@ database_id = "c612ae4a-1a42-41c3-bf91-e8542f0ee3f2"
 [env.staging]
 name = "staging-dexgram-userdb-api"
 workers_dev = false
-staging_urls = false
 routes = [
   { pattern = "staging-userdb.dexgram.app/*", zone_name = "dexgram.app" }
 ]
